@@ -6,7 +6,7 @@ df = pd.read_csv("tourism_project/data/tourism.csv")
 # Drop the leftover index column and the customer identifier
 df = df.drop(columns=["Unnamed: 0", "CustomerID"], errors="ignore")
 
-# Standardise the inconsistent gender label
+# merge `Fe Male` typo with Female column
 df["Gender"] = df["Gender"].replace({"Fe Male": "Female"})
 
 target = "ProdTaken"
