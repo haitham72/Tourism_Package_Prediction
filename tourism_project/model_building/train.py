@@ -11,8 +11,9 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 import joblib
 import mlflow
 
-mlflow.set_tracking_uri("https://localhost:5000")   # complete the code to set the MLflow tracking URI
-mlflow.set_experiment("MLOps_Tourism")     # complete the code to set the MLflow experiment name (same as the dev experimentation cell)
+# Fixed: Use HTTP instead of HTTPS since the local runner MLflow server is unencrypted
+mlflow.set_tracking_uri("http://127.0.0.1:5000")
+mlflow.set_experiment("MLOps_Tourism")
 
 # Xtrain/Xtest/ytrain/ytest are downloaded from the previous job's artifact
 Xtrain = pd.read_csv("Xtrain.csv")
@@ -20,6 +21,8 @@ Xtest = pd.read_csv("Xtest.csv")
 ytrain = pd.read_csv("ytrain.csv").squeeze()
 ytest = pd.read_csv("ytest.csv").squeeze()
 
+# We load the dataset columns schema to identify features
+df = pd.read_csv("tourism_project/data/tourism.csv")
 
 # defining columns to be excluded
 excluded_columns = ['CustomerID', 'ProdTaken', 'Unnamed: 0']
@@ -43,7 +46,6 @@ preprocessor = make_column_transformer(
 xgb_model = xgb.XGBClassifier(scale_pos_weight=class_weight, random_state=42)
 
 # Define hyperparameter grid
-# Fill in suitable values for each parameter based on your understanding of XGBoost tuning.
 param_grid = {
     "xgbclassifier__n_estimators": [50, 75, 100],
     "xgbclassifier__max_depth": [2, 3],
@@ -62,8 +64,7 @@ with mlflow.start_run():
     grid_search = GridSearchCV(model_pipeline, param_grid, cv=5, n_jobs=-1)
     grid_search.fit(Xtrain, ytrain)
 
-    # Log every parameter combination tried during the search as a nested run,
-    # so all experiments can be compared side by side in the MLflow UI
+    # Log every parameter combination tried during the search as a nested run
     results = grid_search.cv_results_
     for i in range(len(results["params"])):
         with mlflow.start_run(nested=True):
@@ -78,7 +79,7 @@ with mlflow.start_run():
     best_model = grid_search.best_estimator_
 
     # Set classification threshold
-    classification_threshold = 0.45    # Choose a classification threshold between 0 and 1. Lower thresholds typically increase recall and decrease precision and vice versa. Experiment with different values to find the best trade-off.
+    classification_threshold = 0.45
 
     # Make predictions on the training and test data
     y_pred_train_proba = best_model.predict_proba(Xtrain)[:, 1]
@@ -103,9 +104,8 @@ with mlflow.start_run():
         "test_f1-score": test_report['1']['f1-score']
     })
 
-    # Save the model next to app.py so the Streamlit app can load it directly,
-    # and log it as an MLflow artifact for traceability
-    model_path = "tourism_project/deployment/best_prediction.joblib"   # Specify the local file path (inside tourism_project/deployment/) where the trained model should be saved.
-    joblib.dump(best_model, model_path)  # complete the code to save the model
+    # Save the model next to app.py so the Streamlit app can load it directly
+    model_path = "tourism_project/deployment/best_prediction.joblib"
+    joblib.dump(best_model, model_path)
     mlflow.log_artifact(model_path, artifact_path="model")
     print(f"Model saved to {model_path}")
