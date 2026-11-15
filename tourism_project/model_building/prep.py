@@ -14,7 +14,10 @@ X = df.drop(columns=[target])
 y = df[target]
 
 Xtrain, Xtest, ytrain, ytest = train_test_split(
-    X, y, test_size=0.2, random_state=42, stratify=y
+    X, y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
 )
 
 Xtrain.to_csv("Xtrain.csv", index=False)
